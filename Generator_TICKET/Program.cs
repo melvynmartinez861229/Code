@@ -3,6 +3,7 @@ using iTextSharp.text;
 using iTextSharp.text.pdf;
 using System.IO;
 using System.Text;
+using System.Collections.Generic;
 
 namespace Generator_TICKET
 {
@@ -11,34 +12,65 @@ namespace Generator_TICKET
         static void Main(string[] args)
         {
             Console.Write("Generate PDF: ");
-            
+            bool success = false;
             try
             {
                 string clientInfo = "100524 - MARIA GUADALUPE AGUILARA MARIN";
+                DataTicket dataTicket = new DataTicket();
+                dataTicket.id = 1234;
+                dataTicket.client.id = 100524;
+                dataTicket.client.name = "MARIA GUADALUPE AGUILARA MARIN";
+                dataTicket.distribuidor.fecha = "12/06/2023";
+                dataTicket.distribuidor.hora = "12:00:00";
+                dataTicket.distribuidor.USU = "CAJA";
+                dataTicket.distribuidor.Estacion = "CAJA1";
+                dataTicket.productos = new List<Producto>(); //falta el FOR para pintar en la tabla
+                dataTicket.pago.totalProductos = 20;
+                dataTicket.pago.totalPrecio = 58;
+                dataTicket.pago.pagoSTR = "TRESCIENTOS SESENTA Y CINCO PESOS (74/100) MN";
+                dataTicket.pago.EFE = 50.50;
+                dataTicket.pago.TCR = 60.50;
+                dataTicket.pago.EFETCR = 70.50;
+                dataTicket.pago.cambio = 80.50;
+
 
                 FacturaCompraPDF factura = new FacturaCompraPDF();
-                factura.CrearFacturaCompraPDF(56842,clientInfo);
+                factura.CrearFacturaCompraPDF(dataTicket);
+                success = true;
             }
             catch (Exception e)
             {
 
                 Console.Write("Fail");
+
+            }
+
+            if (success)
+            {
+                Console.Write("Succefully");
             }
             
-
-            Console.Write("Succefully");
             Console.ReadKey();
         }
     }
 
     public class FacturaCompraPDF
     {
-        public void CrearFacturaCompraPDF(int ticketID,string clientInfo)
+        public void CrearFacturaCompraPDF(DataTicket dataticket)
         {
             // Crear documento:
             Document doc = new Document(new Rectangle(223.94f, 800), 10, 10, 10, 10);
-            PdfWriter writer = PdfWriter.GetInstance(doc, new FileStream($"Ticket_{ticketID}.pdf", FileMode.Create));
+            PdfWriter writer = PdfWriter.GetInstance(doc, new FileStream($"Ticket_{dataticket.id}.pdf", FileMode.Create));
+            
             doc.Open();
+
+            //FONTS
+            var font_Hight = new Font(Font.FontFamily.HELVETICA, 10, Font.BOLD);
+            var font_VeryHight = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD);
+            var font_MidlleHight = new Font(Font.FontFamily.HELVETICA, 8.5f, Font.BOLD);
+            var font_Bold = new Font(Font.FontFamily.HELVETICA, 8.5f, Font.BOLD);
+            var font_Light = new Font(Font.FontFamily.HELVETICA, 8f, Font.NORMAL);
+            //var font_Line = new Font(Font.FontFamily.HELVETICA, 2f, Font.BOLD);
 
             // Image Logo
             string rutaImagenEncabezado = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "assets", "elPunto.png");
@@ -47,116 +79,48 @@ namespace Generator_TICKET
             doc.Add(imagenEncabezado);
 
             // HEADER
-            Paragraph pHeader = new Paragraph();
-            pHeader.Leading = 9;
-            Chunk chunkHeaderTitle = new Chunk("DISTRIBUIDORA FARMACEUTICA\nPERU #100 ESQ. 5 DE MAYO, TOLUCA MEX.\nC.P. 50090 SUC.TOLUCA\nCEL / WHATSAPP 722 5850951 / 722 3985672");
-            chunkHeaderTitle.Font = new Font(Font.FontFamily.HELVETICA, 8.5f, Font.BOLD);
-            pHeader.Add(chunkHeaderTitle);
-
-            var font_Hight = new Font(Font.FontFamily.HELVETICA, 10, Font.BOLD);
+            doc.Add(GetParagraph(GetChunk($"DISTRIBUIDORA FARMACEUTICA\nPERU #100 ESQ. 5 DE MAYO, TOLUCA MEX.\nC.P. 50090 SUC.TOLUCA\nCEL / WHATSAPP 722 5850951 / 722 3985672", font_MidlleHight), 9));
+            
             // TicketID
-            Paragraph pTicketID = new Paragraph();
-            pTicketID.SpacingBefore = 9;
-            pTicketID.SpacingAfter = 9;
-            pTicketID.Leading = 9;
-            pTicketID.Alignment = Element.ALIGN_CENTER;
-            Chunk TicketID_ = new Chunk($"TICKET: {ticketID}");
-            chunkHeaderTitle.Font = font_Hight;
-            pTicketID.Add(TicketID_);
+            doc.Add(GetParagraph($"TICKET: {dataticket.id}",9,9,9, font_VeryHight, Element.ALIGN_CENTER));
 
             // ClientInfo
-            Paragraph pClientInfo = new Paragraph();
-            pClientInfo.SpacingBefore = 0;
-            pClientInfo.SpacingAfter = 5;
-            pClientInfo.Leading = 8;
-            pClientInfo.Alignment = Element.ALIGN_LEFT;
-            Chunk pClientInfo_ = new Chunk($"CLIENTE: {clientInfo}");
-            pClientInfo_.Font = new Font(Font.FontFamily.HELVETICA, 8.5f, Font.BOLD);
-            pClientInfo.Add(pClientInfo_);
+            doc.Add(GetParagraph(GetChunk($"CLIENTE: {dataticket.client.id} - {dataticket.client.name}", font_MidlleHight),0,5,8,Element.ALIGN_LEFT));
 
-           
+            // TABLA DISTRIBUIDOR SUP. FECHA - HORA / USU
+            PdfPTable tblDistribuidor_Sup = GetTable(2, new float[] { 2f, 1f });            
+            tblDistribuidor_Sup.AddCell(GetParagraph($"FECHA: {dataticket.distribuidor.fecha} {dataticket.distribuidor.hora}", 8, font_MidlleHight, Element.ALIGN_LEFT));
+            tblDistribuidor_Sup.AddCell(GetParagraph($"USU: {dataticket.distribuidor.USU}", 8, font_MidlleHight, Element.ALIGN_LEFT));
+            tblDistribuidor_Sup.SpacingAfter = 5;
+            doc.Add(tblDistribuidor_Sup);
+            
+            // TABLA DISTRIBUIDOR INF. ESTACION - VENDEDOR
+            PdfPTable tblDistribuidor_inf = GetTable(2, new float[] { 1f, 1f });
+            tblDistribuidor_inf.AddCell(GetParagraph($"ESTACION: {dataticket.distribuidor.Estacion} {dataticket.distribuidor.hora}", 8, font_MidlleHight, Element.ALIGN_LEFT));
+            tblDistribuidor_inf.AddCell(GetParagraph($"VENDEDOR: {dataticket.distribuidor.vendedor} {dataticket.distribuidor.hora}", 8, font_MidlleHight, Element.ALIGN_LEFT));
+            tblDistribuidor_inf.SpacingAfter = 5;
+            doc.Add(tblDistribuidor_inf);
 
-            //TABLA Add Data Time
-            PdfPTable tablaDataTime = new PdfPTable(2);
-            tablaDataTime.DefaultCell.Padding = 0;
-            tablaDataTime.DefaultCell.Border = 0;
-            float[] anchosColumnas = new float[] { 2f, 1f };
-            tablaDataTime.SetWidths(anchosColumnas);
-            tablaDataTime.WidthPercentage = 100f;
-           
-            Paragraph DtaTime = new Paragraph();
-            DtaTime.Leading = 8;
-            DtaTime.Alignment = Element.ALIGN_LEFT;
-            DtaTime.Font = new Font(Font.FontFamily.HELVETICA, 8.5f, Font.BOLD);
-            DtaTime.Add("FECHA: 12/06/2023 12:00:00");
-            tablaDataTime.AddCell(DtaTime);
-
-            Paragraph DtaCaja = new Paragraph();
-            DtaCaja.Leading = 8;
-            DtaCaja.Alignment = Element.ALIGN_RIGHT;
-            DtaCaja.Font = new Font(Font.FontFamily.HELVETICA, 8.5f, Font.BOLD);
-            DtaCaja.Add("USU: CAJA");
-            tablaDataTime.AddCell(DtaCaja);
-            tablaDataTime.SpacingAfter = 5;
-
-            //TABLA Add Data Time
-            PdfPTable tablaCaja = new PdfPTable(2);
-            tablaCaja.DefaultCell.Padding = 0;
-            tablaCaja.DefaultCell.Border = 0;
-            tablaCaja.SetWidths(new float[] { 1f, 1f});
-            tablaCaja.WidthPercentage = 100f;
-
-            Paragraph DtaEstacion = new Paragraph();
-            DtaEstacion.Leading = 8;
-            DtaEstacion.Alignment = Element.ALIGN_LEFT;
-            DtaEstacion.Font = new Font(Font.FontFamily.HELVETICA, 8.5f, Font.BOLD);
-            DtaEstacion.Add("ESTACION: CAJA1");
-            tablaCaja.AddCell(DtaEstacion);
-
-            Paragraph DtaVendedor = new Paragraph();
-            DtaVendedor.Leading = 8;
-            DtaVendedor.Alignment = Element.ALIGN_RIGHT;
-            DtaVendedor.Font = new Font(Font.FontFamily.HELVETICA, 8.5f, Font.BOLD);
-            DtaVendedor.Add("VENDEDOR: CA3");
-            tablaCaja.AddCell(DtaVendedor);
-
-            tablaCaja.SpacingAfter = 5;
-
-            Paragraph Line = new Paragraph(new String('_',30));
-            Line.Alignment = Element.ALIGN_LEFT;
-            Line.Font = new Font(Font.FontFamily.HELVETICA, 2f, Font.BOLD);
-
-            //add DOC
-            doc.Add(pHeader);
-            doc.Add(pTicketID);
-            doc.Add(pClientInfo);
-            doc.Add(tablaDataTime);
-            doc.Add(tablaCaja);
-            doc.Add(Line);
-
-            Paragraph TextDescripcion = new Paragraph();
+            doc.Add(CreateLine());
+            
+            //DESCRIPTION
+            Paragraph TextDescripcion = GetParagraph("D E S C R I P C I O N",8,font_MidlleHight, Element.ALIGN_CENTER);
             TextDescripcion.SpacingBefore = 2;
             TextDescripcion.SpacingAfter = 5;
-            TextDescripcion.Leading = 8;
-            TextDescripcion.Alignment = Element.ALIGN_CENTER;
-            TextDescripcion.Font = new Font(Font.FontFamily.HELVETICA, 8.5f, Font.BOLD);
-            TextDescripcion.Add("D E S C R I P C I O N");
             doc.Add(TextDescripcion);
-            //Header Table
-            PdfPTable tablaHeaderImport = new PdfPTable(5);
-            tablaHeaderImport.DefaultCell.Padding = 0;
-            tablaHeaderImport.DefaultCell.Border = 0;
-            tablaHeaderImport.SetWidths(new float[] { .8f,.9f,1.4f,.9f,1f });
-            tablaHeaderImport.WidthPercentage = 100f;
-            var font_Bold = new Font(Font.FontFamily.HELVETICA, 8.5f, Font.BOLD);
-            var font_Light = new Font(Font.FontFamily.HELVETICA, 8f, Font.NORMAL);
-            tablaHeaderImport.AddCell(GetParagraph("CANT.", 8, font_Bold, Element.ALIGN_LEFT));            
+            //TABLE PRODUCTS HEADER
+            PdfPTable tablaHeaderImport = GetTable(5, new float[] { .8f, .9f, 1.4f, .9f, 1f });
+            
+            //Header Table           
+            tablaHeaderImport.AddCell(GetParagraph("CANT.", 8, font_Bold, Element.ALIGN_LEFT));
             tablaHeaderImport.AddCell(GetParagraph("  LOTE", 8, font_Bold, Element.ALIGN_LEFT));
             tablaHeaderImport.AddCell(GetParagraph("CADUCIDAD", 8, font_Bold, Element.ALIGN_LEFT));
             tablaHeaderImport.AddCell(GetParagraph("PRECIO", 8, font_Bold, Element.ALIGN_LEFT));
-            tablaHeaderImport.AddCell(GetParagraph("IMPORTE", 8, font_Bold, Element.ALIGN_LEFT));                       
+            tablaHeaderImport.AddCell(GetParagraph("IMPORTE", 8, font_Bold, Element.ALIGN_LEFT));
             doc.Add(tablaHeaderImport);
-            doc.Add(Line);
+            doc.Add(CreateLine());
+
+
             foreach (var item in new int[3])
             {
                 var name_product = GetParagraph("El nombre del producto es ", 8, font_Light, Element.ALIGN_LEFT);
@@ -189,75 +153,59 @@ namespace Generator_TICKET
                 doc.Add(tablaProductsVuelto);
 
             }
-            doc.Add(Line);
-            PdfPTable tablaFooter = new PdfPTable(4);
-            tablaFooter.DefaultCell.Padding = 0;
-            tablaFooter.DefaultCell.Border = 0;
-            tablaFooter.SetWidths(new float[] { .3f, 1.4f, 2.1f, .5f, });
-            tablaFooter.WidthPercentage = 100f;
-            tablaFooter.AddCell(GetParagraph($"{16}", 8, font_Light, Element.ALIGN_LEFT));
+            doc.Add(CreateLine());
+
+            PdfPTable tablaFooter = GetTable(4,new float[] { .3f, 1.4f, 2.1f, .5f, });
+            tablaFooter.AddCell(GetParagraph($"{dataticket.pago.totalProductos}", 8, font_Light, Element.ALIGN_LEFT));
             tablaFooter.AddCell(GetParagraph("PRODUCTOS", 8, font_Light, Element.ALIGN_LEFT));
             tablaFooter.AddCell(GetParagraph("TOTAL", 8, font_Hight, Element.ALIGN_LEFT));
-            tablaFooter.AddCell(GetParagraph($"${100.00}", 8, font_Hight, Element.ALIGN_RIGHT));
+            tablaFooter.AddCell(GetParagraph($"${dataticket.pago.totalPrecio}", 8, font_Hight, Element.ALIGN_RIGHT));
             tablaFooter.SpacingBefore = 5f;
             tablaFooter.SpacingAfter = 5f;
             doc.Add(tablaFooter);
-            var numberToText = GetParagraph("TRESCIENTOS SESENTA Y CINCO PESOS (74/100) MN", 8, font_Light, Element.ALIGN_CENTER);
+            
+            // STR Precio
+            var numberToText = GetParagraph($"{dataticket.pago.pagoSTR}", 8, font_Light, Element.ALIGN_CENTER);
             numberToText.SpacingBefore = 3f;
             numberToText.SpacingAfter = 3f;
             doc.Add(numberToText);
-
-
-            PdfPTable tablaPago = new PdfPTable(4);
-            tablaPago.DefaultCell.Padding = 0;
-            tablaPago.DefaultCell.Border = 0;
-            tablaPago.SetWidths(new float[] { 1.3f, 1f,1f, 0.7f });
-            tablaPago.WidthPercentage = 100f;
+            
+            // SU PAGO / EFE
+            PdfPTable tablaPago = GetTable(4,new float[] { 1.3f, 1f, 1f, 0.7f });
             tablaPago.AddCell(GetParagraph($" ", 8, font_Bold, Element.ALIGN_LEFT));
             tablaPago.AddCell(GetParagraph("Su Pago:", 8, font_Bold, Element.ALIGN_LEFT));
             tablaPago.AddCell(GetParagraph("EFE", 8, font_Light, Element.ALIGN_LEFT));
-            tablaPago.AddCell(GetParagraph($"$0.00", 8, font_Light, Element.ALIGN_RIGHT));
+            tablaPago.AddCell(GetParagraph($"${dataticket.pago.EFE}", 8, font_Light, Element.ALIGN_RIGHT));
             tablaPago.SpacingBefore = 3f;
             tablaPago.SpacingAfter = 3f;
             doc.Add(tablaPago);
-
-            PdfPTable tablaPagoTCR = new PdfPTable(4);
-            tablaPagoTCR.DefaultCell.Padding = 0;
-            tablaPagoTCR.DefaultCell.Border = 0;
-            tablaPagoTCR.SetWidths(new float[] { 1.3f, 1f, 1f, 0.7f });
-            tablaPagoTCR.WidthPercentage = 100f;
+            
+            //TCR
+            PdfPTable tablaPagoTCR = GetTable(4,new float[] { 1.3f, 1f, 1f, 0.7f });
             tablaPagoTCR.AddCell(GetParagraph($" ", 8, font_Bold, Element.ALIGN_LEFT));
             tablaPagoTCR.AddCell(GetParagraph(" ", 8, font_Bold, Element.ALIGN_LEFT));
             tablaPagoTCR.AddCell(GetParagraph("TCR", 8, font_Light, Element.ALIGN_RIGHT));
-            tablaPagoTCR.AddCell(GetParagraph($"$555.00", 8, font_Light, Element.ALIGN_RIGHT));
+            tablaPagoTCR.AddCell(GetParagraph($"${dataticket.pago.TCR}", 8, font_Light, Element.ALIGN_RIGHT));
             tablaPagoTCR.SpacingBefore = 3f;
             tablaPagoTCR.SpacingAfter = 3f;
             doc.Add(tablaPagoTCR);
 
-
-            PdfPTable tablaPagoTCRVuelto = new PdfPTable(4);
-            tablaPagoTCRVuelto.DefaultCell.Padding = 0;
-            tablaPagoTCRVuelto.DefaultCell.Border = 0;
-            tablaPagoTCRVuelto.SetWidths(new float[] { 1.3f, 1f, 1f, 0.7f });
-            tablaPagoTCRVuelto.WidthPercentage = 100f;
+            //SUB-TOTAL 
+            PdfPTable tablaPagoTCRVuelto = GetTable(4,new float[] { 1.3f, 1f, 1f, 0.7f });
             tablaPagoTCRVuelto.AddCell(GetParagraph($" ", 8, font_Bold, Element.ALIGN_LEFT));
             tablaPagoTCRVuelto.AddCell(GetParagraph(" ", 8, font_Bold, Element.ALIGN_LEFT));
             tablaPagoTCRVuelto.AddCell(GetParagraph(" ", 8, font_Light, Element.ALIGN_RIGHT));
-            tablaPagoTCRVuelto.AddCell(GetParagraph($"$00.00", 8, font_Light, Element.ALIGN_RIGHT));
+            tablaPagoTCRVuelto.AddCell(GetParagraph($"${dataticket.pago.EFETCR}", 8, font_Light, Element.ALIGN_RIGHT));
             tablaPagoTCRVuelto.SpacingBefore = 3f;
             tablaPagoTCRVuelto.SpacingAfter = 3f;
             doc.Add(tablaPagoTCRVuelto);
 
-
-            PdfPTable tablaCambio = new PdfPTable(4);
-            tablaCambio.DefaultCell.Padding = 0;
-            tablaCambio.DefaultCell.Border = 0;
-            tablaCambio.SetWidths(new float[] { 1.3f, 1f, 1f, 0.7f });
-            tablaCambio.WidthPercentage = 100f;
+           //CAMBIO
+            PdfPTable tablaCambio = GetTable(4,new float[] { 1.3f, 1f, 1f, 0.7f });
             tablaCambio.AddCell(GetParagraph($" ", 8, font_Bold, Element.ALIGN_LEFT));
             tablaCambio.AddCell(GetParagraph(" ", 8, font_Bold, Element.ALIGN_LEFT));
             tablaCambio.AddCell(GetParagraph("Su cambio:", 8, font_Bold, Element.ALIGN_RIGHT));
-            tablaCambio.AddCell(GetParagraph($"$00.00", 8, font_Bold, Element.ALIGN_RIGHT));
+            tablaCambio.AddCell(GetParagraph($"${dataticket.pago.cambio}", 8, font_Bold, Element.ALIGN_RIGHT));
             tablaCambio.SpacingBefore = 3f;
             tablaCambio.SpacingAfter = 3f;
             doc.Add(tablaCambio);
@@ -267,13 +215,13 @@ namespace Generator_TICKET
             pFinal.Leading = 9;
             pFinal.Alignment = Element.ALIGN_CENTER;
             pFinal.SpacingBefore = 5;
-            Chunk chunkpFinal = new Chunk("UNTOS COMPROMETIDOS CON LA SALUD\n"+
-                                            "LAS CONDICIONES DE ALMACENAMIENTO\n"+
-                                            "DEBEN SER DE ACUERDO CON LAS\n"+
-                                            "ESPECIFICACIONES DEL FABRICANTE\n"+
-                                            "NO SE ACEPTAN DEVOLUCIONES\n"+
-                                            "DOCUMENTOS SIN EFECTOS FISCALES\n"+
-                                            "EN CASO DE REQUERIR FACTURA\n"+
+            Chunk chunkpFinal = new Chunk("UNTOS COMPROMETIDOS CON LA SALUD\n" +
+                                            "LAS CONDICIONES DE ALMACENAMIENTO\n" +
+                                            "DEBEN SER DE ACUERDO CON LAS\n" +
+                                            "ESPECIFICACIONES DEL FABRICANTE\n" +
+                                            "NO SE ACEPTAN DEVOLUCIONES\n" +
+                                            "DOCUMENTOS SIN EFECTOS FISCALES\n" +
+                                            "EN CASO DE REQUERIR FACTURA\n" +
                                             "SOLICITELA EL MISMO DIA");
             chunkpFinal.Font = new Font(Font.FontFamily.HELVETICA, 8.5f, Font.BOLD);
             pFinal.Add(chunkpFinal);
@@ -293,6 +241,15 @@ namespace Generator_TICKET
 
             doc.Close();
         }
+
+        private Paragraph CreateLine()
+        {
+            Paragraph Line = new Paragraph(new String('_', 30));
+            Line.Alignment = Element.ALIGN_LEFT;
+            Line.Font = new Font(Font.FontFamily.HELVETICA, 2f, Font.BOLD);
+            return Line;
+        }
+
         private Paragraph GetParagraph(string txt, float leading, Font font, int align)
         {
             Paragraph temp = new Paragraph();
@@ -302,5 +259,106 @@ namespace Generator_TICKET
             temp.Add(txt);
             return temp;
         }
+
+        private PdfPTable GetTable(int columns, float[]relation)
+        {
+            PdfPTable temp = new PdfPTable(columns);
+            temp.DefaultCell.Padding = 0;
+            temp.DefaultCell.Border = 0;
+            temp.SetWidths(relation);
+            temp.WidthPercentage = 100f;
+            return temp;
+        }
+
+
+        private Paragraph GetParagraph(string txt,float SpacingBefore,float SpacingAfter, float leading, Font font, int align)
+        {
+            Paragraph temp = new Paragraph();
+            temp.SpacingBefore = 9;
+            temp.SpacingAfter = 9;
+            temp.Leading = leading;
+            temp.Alignment = align;
+            temp.Font = font;
+            temp.Add(txt);
+            return temp;
+        }
+
+        private Chunk GetChunk(string txt, Font _font)
+        {
+            Chunk temp = new Chunk(txt);
+            temp.Font = _font;
+            return temp;
+        }
+
+
+        private Paragraph GetParagraph(Chunk chunk, float SpacingBefore, float SpacingAfter, float leading, int align)
+        {
+            Paragraph temp = new Paragraph();
+            temp.SpacingBefore = SpacingBefore;
+            temp.SpacingAfter = SpacingAfter;
+            temp.Leading = leading;
+            temp.Alignment = align;
+            temp.Add(chunk);
+            return temp;
+        }
+
+        private Paragraph GetParagraph(Chunk chunk, float leading)
+        {
+            Paragraph temp = new Paragraph();
+            temp.Leading = leading;
+            temp.Add(chunk);
+            return temp;
+        }
+
     }
+
+    public class Cliente
+    {
+        public int id;
+        public string name;
+    }
+
+    public class Distribuidor 
+    {
+        public string fecha;
+        public string hora;
+        public string USU;
+        public string Estacion;
+        public string vendedor;
+
+    }
+
+    public class Producto
+    {
+        public int cantidad;
+        public int lote;
+        public string caducidad;
+        public double precio;
+        public double importe;
+    }
+
+    public class Pago
+    {
+        public int totalProductos;
+        public double totalPrecio;
+        public string pagoSTR;
+        public double EFE;
+        public double TCR;
+        public double EFETCR;
+        public double cambio;
+    }
+
+    public class DataTicket
+    {
+        public int id = 0;
+        public Cliente client = new Cliente();
+        public Distribuidor distribuidor = new Distribuidor();
+        public List<Producto> productos = new List<Producto>();
+        public int cantidadTotal = 0;
+        public double importe = 0;
+        public string importeString = "";
+        public Pago pago = new Pago();
+    }
+
+
 }

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Sky\\source\\repos\\Generator_TICKET\\Generator_TICKET.csproj": {}
+    "C:\\Users\\Sky\\Desktop\\Code\\Code\\Generator_TICKET\\Generator_TICKET.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Sky\\source\\repos\\Generator_TICKET\\Generator_TICKET.csproj": {
+    "C:\\Users\\Sky\\Desktop\\Code\\Code\\Generator_TICKET\\Generator_TICKET.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Sky\\source\\repos\\Generator_TICKET\\Generator_TICKET.csproj",
+        "projectUniqueName": "C:\\Users\\Sky\\Desktop\\Code\\Code\\Generator_TICKET\\Generator_TICKET.csproj",
         "projectName": "Generator_TICKET",
-        "projectPath": "C:\\Users\\Sky\\source\\repos\\Generator_TICKET\\Generator_TICKET.csproj",
+        "projectPath": "C:\\Users\\Sky\\Desktop\\Code\\Code\\Generator_TICKET\\Generator_TICKET.csproj",
         "packagesPath": "C:\\Users\\Sky\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Sky\\source\\repos\\Generator_TICKET\\obj\\",
+        "outputPath": "C:\\Users\\Sky\\Desktop\\Code\\Code\\Generator_TICKET\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Microsoft\\Xamarin\\NuGet\\"
